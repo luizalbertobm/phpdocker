@@ -1,0 +1,83 @@
+version: '3.9'
+services:
+    ##########################################################
+    nginx:
+        container_name: ${CONTAINER_PREFIX}-nginx
+        image: 'nginx:alpine'
+        working_dir: /app
+        volumes:
+            - './code:/app'
+            - './docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf'
+        ports:
+            - "${NGINX_PORT}:80"
+        environment:
+            - NGINX_HOST=localhost
+            - NGINX_PORT=80
+    ##########################################################
+    php-fpm:
+        container_name: ${CONTAINER_PREFIX}-php-fpm
+        build: 
+            context: ./docker/php-fpm/
+            args:
+                UID: ${USER_ID}
+                GID: ${GROUP_ID}
+        working_dir: /app
+        environment:
+            - PHP_IDE_CONFIG="serverName=Docker"
+            - UID
+        volumes:
+            - './code:/app'
+            - './docker/php-fpm/override-php.ini:/usr/local/etc/php/conf.d/99-custom_overrides.ini'
+    ##########################################################
+    database:
+        container_name: ${CONTAINER_PREFIX}-database
+        image: 'mariadb:10.6'
+        working_dir: /application
+        volumes:
+            - ./docker/database:/application
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=${DATABASE_NAME}
+            - MYSQL_USER=${DATABASE_USER}
+            - MYSQL_PASSWORD=${DATABASE_PASSWORD}
+        ports:
+            - ${DATABASE_PORT}:3306
+
+    ##########################################################
+    adminer:
+        container_name: ${CONTAINER_PREFIX}-adminer
+        image: adminer
+        environment:
+            - ADMINER_PLUGINS=${ADMINER_PLUGINS}
+            - ADMINER_DESIGN=${ADMINER_DESIGN}
+        restart: always
+        ports:
+            - ${ADMINER_PORT}:8080
+        links:
+            - database
+    ##########################################################
+    elasticsearch:
+        container_name: ${CONTAINER_PREFIX}-elasticsearch
+        image: 'elasticsearch:6.5.4'
+    ##########################################################
+    mailhog:
+        container_name: ${CONTAINER_PREFIX}-mailhog
+        image: 'mailhog/mailhog:latest'
+        ports:
+            - '${MAILHOG_APP_PORT}:8025'
+            - '${MAILHOG_SMTP_PORT}:1025'
+    ##########################################################
+    redis:
+        container_name: ${CONTAINER_PREFIX}-redis
+        image: 'redis:alpine'
+    ##########################################################
+    ngrok:
+        container_name: ${CONTAINER_PREFIX}-ngrok
+        image: 'shkoliar/ngrok'
+        ports:
+            - "${NGROK_PORT}:4551"
+        environment:
+            - AUTH_TOKEN=23K4Hcn7Nd1st9KPB9j9opLCI8N_2tSMB7uFGM2uUq9VYKZjC
+            - REGION=eu
+            - PORT=80
+            - DOMAIN=nginx
